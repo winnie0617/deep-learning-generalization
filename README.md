@@ -1,1 +1,0 @@
-Make sure you have the dataset locally. Download CIFAR-10 Python version from https://www.cs.toronto.edu/~kriz/cifar.html
