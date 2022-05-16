@@ -105,21 +105,15 @@ def get_model(
         train_kwargs.update(cuda_kwargs)
         test_kwargs.update(cuda_kwargs)
 
-    transform = transforms.Compose([transforms.ToTensor()])
-    # Find mean and std from train data
-    dataset1 = datasets.CIFAR10("../data", train=True, download=True)
-    img_trans = transform(dataset1)
-    mean, std = img_trans.mean([1, 2]), img_trans.std([1, 2])
-
-    transform_norm = transforms.Compose(
-        [transforms.ToTensor(), transforms.Normalize(mean, std)]
-    )
-    dataset1 = transform_norm(dataset1)
-    dataset2 = datasets.CIFAR10("../data", train=False, transform=transform_norm)
-    # dataset1 = datasets.MNIST('../data', train=True, download=True,
-    #                    transform=transform)
-    # dataset2 = datasets.MNIST('../data', train=False,
-    #                    transform=transform)
+    transform=transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Normalize((0.4914, 0.4822, 0.4465), (0.247, 0.243, 0.261))
+            # values from https://github.com/kuangliu/pytorch-cifar/issues/19
+            ])
+    dataset1 = datasets.CIFAR10('../data', train=True, download=True,
+                       transform=transform)
+    dataset2 = datasets.CIFAR10('../data', train=False,
+                       transform=transform)
 
     train_loader = torch.utils.data.DataLoader(dataset1, **train_kwargs)
     test_loader = torch.utils.data.DataLoader(dataset2, **test_kwargs)
