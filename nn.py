@@ -128,10 +128,10 @@ def get_model(
     return model, test_loss
 
 
-def get_weights():
+def get_weights(model):
     ''' Return parameters of the neural network'''
-    # TODO
-    pass
+    return model.fc2.weight.data.numpy()
+    
 
 
 def main():
