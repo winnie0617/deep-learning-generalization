@@ -8,17 +8,24 @@ from torchvision import datasets, transforms
 from torch.optim.lr_scheduler import StepLR
 from torchsummary import summary
 from sklearn.model_selection import ParameterGrid
+from math import log10
+import numpy as np
 
-
+#input_size = 32 = W
+#kernel_size = 3 = K
+#padding - 0 = P
+#stride = 1 = S
+#(W-K+2P)/S + 1 -->  
 class Net(nn.Module):
     def __init__(self, dp):
+        #I decreased the channel numbers significantly for faster debugging.
         super(Net, self).__init__()
-        self.conv1 = nn.Conv2d(3, 32, 3, 1)
-        self.conv2 = nn.Conv2d(32, 64, 3, 1)
+        self.conv1 = nn.Conv2d(3, 3, 3, 1)
+        self.conv2 = nn.Conv2d(3, 3, 3, 1)
         self.dropout1 = nn.Dropout(dp)
         self.dropout2 = nn.Dropout(dp)
-        self.fc1 = nn.Linear(12544, 128)  # 64 x 14 x 14
-        self.fc2 = nn.Linear(128, 10)
+        self.fc1 = nn.Linear(588, 20)  # 3 x 14 x 14
+        self.fc2 = nn.Linear(20, 10)
 
     def forward(self, x):
         x = self.conv1(x)
@@ -206,13 +213,35 @@ def get_models(
 
     return model_list, train_loss_list, test_loss_list
     
+def get_vc(model):
+    """
+    Returns VC dimension of a given model
+
+    Tightest VC Dimension for a regular nn is O(WLlog(W)), where W = # of weights, L = # of layers (depth)
+    """
+    nn_weight_num = 0
+    fc_weight_num = 0
+    L = -1
+    for layer in model.children():
+        if isinstance(layer, nn.Linear):
+            #for linear activation, w_i = (input_i + 1)*output_i
+            L += 1
+            fc_weight_num += (layer.in_features+1)*layer.out_features
+        elif isinstance(layer, nn.Conv2d):
+            # in general, # of w_i = (kernel_size^2 * output_{i-1} + 1)*output_{i}, output_i = input_i-1
+            # so total # of weights = \sum_{i} w_{i} 
+            L += 1
+            nn_weight_num += ((layer.kernel_size[0]**2)*layer.in_channels + 1)*layer.out_channels
+    
+    W = nn_weight_num + fc_weight_num
+    print("Weight =" + str(W))
+    print("Layer =" + str(L))
+    return W*L*log10(L)
 
 def get_weights(model):
     ''' Return parameters of the neural network'''
     return model.fc2.weight.data.numpy()
     
-
-
 def main():
     # Training settings
     parser = argparse.ArgumentParser(description="PyTorch MNIST Example")
