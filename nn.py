@@ -10,28 +10,28 @@ from torchsummary import summary
 from sklearn.model_selection import ParameterGrid
 
 
+
+
 class Net(nn.Module):
-    def __init__(self, dp):
+    def __init__(self, width, depth, dp):
         super(Net, self).__init__()
-        self.conv1 = nn.Conv2d(3, 32, 3, 1)
-        self.conv2 = nn.Conv2d(32, 64, 3, 1)
-        self.dropout1 = nn.Dropout(dp)
-        self.dropout2 = nn.Dropout(dp)
-        self.fc1 = nn.Linear(12544, 128)  # 64 x 14 x 14
-        self.fc2 = nn.Linear(128, 10)
+        self.conv1 = nn.Conv2d(3, 32, 3, 2) #TODO: How many cout?
+        self.conv2 = nn.Conv2d(32, 64, 1, 1)
+        self.conv3 = nn.Conv2d(32, width, 1, 1)
+        self.dropout = nn.Dropout(dp)
+        self.conv4 = nn.Conv2d(width, 10, 1, 1) # Reduce channel number to class number
 
     def forward(self, x):
         x = self.conv1(x)
         x = F.relu(x)
         x = self.conv2(x)
         x = F.relu(x)
-        x = F.max_pool2d(x, 2)
-        x = self.dropout1(x)
-        x = torch.flatten(x, 1)
-        x = self.fc1(x)
+        x = self.conv3(x)
         x = F.relu(x)
-        x = self.dropout2(x)
-        x = self.fc2(x)
+        x = self.dropout(x)
+        x = self.conv4(x)
+        x = F.relu(x)
+        x = F.average_pool2d(x, 1)
         output = F.log_softmax(x, dim=1)
         return output
 
@@ -79,10 +79,48 @@ def test(model, device, test_loader):
 
     return test_loss
 
+def make_nn(width, depth, dropout):
+    ''' Return network in network model with given width, depth and dropout'''
+
+    def nin_block(in_channels, out_channels, kernel_size, strides, dropout):
+        return nn.Sequential(
+            nn.Conv2d(in_channels, out_channels, kernel_size, strides),
+            nn.ReLU(),
+            nn.Conv2d(out_channels, out_channels, 1, 1), nn.ReLU(),
+            nn.Conv2d(out_channels, out_channels, 1, 1), nn.ReLU(),
+            nn.Dropout(dropout))
+        
+    def stack_blocks(depth, cin):
+        net = nn.Sequential(
+            nin_block(cin, width, kernel_size=3, strides=2, dropout=dropout),
+            nin_block(width, width, kernel_size=3, strides=2, dropout=dropout))
+        i = depth - 2
+        while i > 0:
+            net.add(nin_block(width, width, kernel_size=3, strides=2))
+            net.add(nin_block(width, width, kernel_size=3, strides=2))
+            i -= 2
+        return net
+
+    cin = 3 # TODO: change for MNIST
+    net = nn.Sequential(
+        stack_blocks(depth, cin),
+        # There are 10 label classes
+        nn.Conv2d(width, 10, 1, 1), nn.ReLU(),
+        nn.AdaptiveAvgPool2d((1, 1)),
+        # Transform the four-dimensional output into two-dimensional output with a
+        # shape of (batch size, 10)
+        nn.Flatten())
+    
+    return net
+
+
 
 def get_model(
     hp,
     epochs=64,
+    width=2*96,
+    depth=2,
+    dropout=0.25,
     test_batch_size=1000,
     lr=1,
     gamma=0.7,
@@ -119,7 +157,8 @@ def get_model(
     train_loader = torch.utils.data.DataLoader(dataset1, **train_kwargs)
     test_loader = torch.utils.data.DataLoader(dataset2, **test_kwargs)
 
-    model = Net().to(device)
+    net = make_nn(width, depth, dropout)
+    model = net.to(device)
     optimizer = optim.Adadelta(model.parameters(), lr=hp["lr"])
 
     summary(model, input_size=(3, 32, 32))
