@@ -7,15 +7,16 @@ import torch.optim as optim
 from torchvision import datasets, transforms
 from torch.optim.lr_scheduler import StepLR
 from torchsummary import summary
+from sklearn.model_selection import ParameterGrid
 
 
 class Net(nn.Module):
-    def __init__(self):
+    def __init__(self, dp, depth):
         super(Net, self).__init__()
         self.conv1 = nn.Conv2d(3, 32, 3, 1)
         self.conv2 = nn.Conv2d(32, 64, 3, 1)
-        self.dropout1 = nn.Dropout(0.25)
-        self.dropout2 = nn.Dropout(0.5)
+        self.dropout1 = nn.Dropout(dp)
+        self.dropout2 = nn.Dropout(dp)
         self.fc1 = nn.Linear(12544, 128)  # 64 x 14 x 14
         self.fc2 = nn.Linear(128, 10)
 
@@ -37,6 +38,7 @@ class Net(nn.Module):
 
 def train(model, device, train_loader, optimizer, epoch, log_interval, dry_run):
     model.train()
+    running_loss = 0
     for batch_idx, (data, target) in enumerate(train_loader):
         data, target = data.to(device), target.to(device)
         optimizer.zero_grad()
@@ -44,6 +46,7 @@ def train(model, device, train_loader, optimizer, epoch, log_interval, dry_run):
         loss = F.nll_loss(output, target)
         loss.backward()
         optimizer.step()
+        running_loss += loss.item()
         if batch_idx % log_interval == 0:
             print(
                 "Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}".format(
@@ -56,6 +59,8 @@ def train(model, device, train_loader, optimizer, epoch, log_interval, dry_run):
             )
             if dry_run:
                 break
+    train_loss=running_loss/len(train_loader)
+    return train_loss
 
 
 def test(model, device, test_loader):
@@ -120,13 +125,87 @@ def get_model(
     summary(model, input_size=(3, 32, 32))
 
     scheduler = StepLR(optimizer, step_size=1, gamma=gamma)
+    train_loss = 0
     for epoch in range(1, epochs + 1):
-        train(model, device, train_loader, optimizer, epoch, log_interval, dry_run)
+        train_loss += train(model, device, train_loader, optimizer, epoch, log_interval, dry_run)
         scheduler.step()
 
+    train_loss /= epochs
     test_loss = test(model, device, test_loader)
-    return model, test_loss
+    return model, train_loss, test_loss
 
+def get_models(
+    bs=[64], 
+    lr=[1],
+    epochs=[1],
+    dp = [0.25],
+    test_batch_size=1000,
+    gamma=0.7,
+    no_cuda=False,
+    dry_run=False,
+    seed=1,
+    log_interval=10,
+    save_model=False
+    ):
+    """
+    Given lists of hyperparameters, provide list of all models with their their associated training & testing loss
+    
+    bs: list of batch size choices (done)
+    lr: list of learning rate choices (done)
+    epochs: list of epoch choices (done)
+    dp: list of dropout probability choices (done)
+    w: list of network layer widths (tbd)
+    d: list of network depth choices (tbd)
+    op: list of optimizer choices (tbd)
+    """
+    param_grid = {'batch':bs, 'lr':lr, 'epoch':epochs, 'dropout':dp}
+    grid = list(ParameterGrid(param_grid))
+
+    transform=transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Normalize((0.4914, 0.4822, 0.4465), (0.247, 0.243, 0.261))
+            # values from https://github.com/kuangliu/pytorch-cifar/issues/19
+            ])
+    dataset1 = datasets.CIFAR10('../data', train=True, download=True,
+                       transform=transform)
+    dataset2 = datasets.CIFAR10('../data', train=False,
+                       transform=transform)
+
+    model_list = []
+    train_loss_list = []
+    test_loss_list = []
+    for hyper in grid:
+        torch.manual_seed(seed)
+        use_cuda = not no_cuda and torch.cuda.is_available()
+        device = torch.device("cuda" if use_cuda else "cpu")
+
+        train_kwargs = {"batch_size": hyper["batch"]}
+        test_kwargs = {"batch_size": test_batch_size}
+        if use_cuda:
+            cuda_kwargs = {"num_workers": 1, "pin_memory": True, "shuffle": True}
+            train_kwargs.update(cuda_kwargs)
+            test_kwargs.update(cuda_kwargs)  
+        train_loader = torch.utils.data.DataLoader(dataset1, **train_kwargs)
+        test_loader = torch.utils.data.DataLoader(dataset2, **test_kwargs)
+        
+        model = Net(hyper['dropout']).to(device)
+        optimizer = optim.Adadelta(model.parameters(), lr=hyper["lr"])
+        summary(model, input_size=(3, 32, 32))
+        scheduler = StepLR(optimizer, step_size=hyper["lr"], gamma=gamma)
+
+        train_loss = 0
+        for epoch in range(1, hyper["epoch"]+1):
+            train_loss += train(model, device, train_loader, optimizer, epoch, log_interval, dry_run)
+            scheduler.step()
+        train_loss /= hyper["epoch"] 
+        test_loss = test(model, device, test_loader)
+        
+        model_list.append(model)
+        train_loss_list.append(train_loss)
+        test_loss_list.append(test_loss)
+
+    return model_list, train_loss_list, test_loss_list
+    
 
 def get_weights(model):
     ''' Return parameters of the neural network'''
