@@ -24,7 +24,7 @@ def correlation_function(comp_measure_list, gen_gap_list):
     for i,j in zip(n,n):
         if i != j:
             running_sum += numpy.sign(comp_measure_list[i] - comp_measure_list[j])*numpy.sign(gen_gap_list[i] - gen_gap_list[j])
-    return running_sum/n
+    return running_sum/cardinality
 
 def basic_kendall(bs, lr, epochs, dp, measure='VC', lst='True'):
     """
