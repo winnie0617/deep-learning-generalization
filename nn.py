@@ -11,7 +11,7 @@ from sklearn.model_selection import ParameterGrid
 
 
 class Net(nn.Module):
-    def __init__(self, dp, depth):
+    def __init__(self, dp):
         super(Net, self).__init__()
         self.conv1 = nn.Conv2d(3, 32, 3, 1)
         self.conv2 = nn.Conv2d(32, 64, 3, 1)
