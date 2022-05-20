@@ -8,6 +8,8 @@ import kendall_correlation
 # print(models.get_weights(model))
 
 hp_list = {"batch_size": [64, 128], "depth": [2,4], "width": [2*96], "lr": [1], "epochs": [1], "dropout": [0.25,0.5]}
+dataset = "CIFAR10"
+dataset = "MNIST"
 
 def test_norm_kendall():
     # norm_list = kendall_correlation.basic_kendall(bs, lr, epochs, dp, comp_measure='norm', norm_measure='spectral_orig', lst=True)
@@ -28,7 +30,7 @@ def test_VC_kendall():
     print('VC kendall: %.3f' % VC_ken_corr)
 
 def test_network():
-    model_list, train_loss_list, test_loss_list = models.get_models(hp_list)
+    model_list, train_loss_list, test_loss_list = models.get_models(hp_list, dataset)
     print('# of Models: ' + str(len(model_list)))
     print('Training Loss:' + str(train_loss_list))
     print('Testing Loss:' +str(test_loss_list))

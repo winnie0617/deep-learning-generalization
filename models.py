@@ -101,8 +101,9 @@ def test(model, device, test_loader):
     return test_loss
 
 
-def make_nn(width, depth, dropout):
-    """Return network in network model with given width, depth and dropout"""
+def make_nn(cin, width, depth, dropout):
+    """Return network in network model with given width, depth and dropout
+    cin: number of input channels"""
 
     def nin_block(in_channels, out_channels, kernel_size, strides, dropout):
         return nn.Sequential(
@@ -135,7 +136,6 @@ def make_nn(width, depth, dropout):
 
         return nn.Sequential(*modules)
 
-    cin = 3  # TODO: change for MNIST
     net = nn.Sequential(
         stack_blocks(depth, cin),
         # There are 10 label classes
@@ -155,6 +155,7 @@ def get_model(
     hp,
     dataset1,
     dataset2,
+    cin,
     test_batch_size=1000,
     gamma=0.7,
     dry_run=False,
@@ -178,11 +179,11 @@ def get_model(
     train_loader = torch.utils.data.DataLoader(dataset1, **train_kwargs)
     test_loader = torch.utils.data.DataLoader(dataset2, **test_kwargs)
 
-    net = make_nn(hp["width"], hp["depth"], hp["dropout"])
+    net = make_nn(cin, hp["width"], hp["depth"], hp["dropout"])
     model = net.to(device)
     optimizer = optim.Adadelta(model.parameters(), lr=hp["lr"])
 
-    summary(model, input_size=(3, 32, 32))
+    summary(model, input_size=(cin, 32, 32))
 
     scheduler = StepLR(optimizer, step_size=1, gamma=gamma)
     train_loss = 0
@@ -197,7 +198,7 @@ def get_model(
     return model, train_loss, test_loss
 
 
-def get_models(hp_list, seed=1):
+def get_models(hp_list, dataset, seed=1):
     """
     Given lists of hyperparameters, provide list of all models with their their associated training & testing loss
 
@@ -209,17 +210,27 @@ def get_models(hp_list, seed=1):
     # Load data
     torch.manual_seed(seed)
 
+    if dataset == "CIFAR10":
+        print("===== Using CIFAR10 Dataset =====")
+        # values from https://github.com/kuangliu/pytorch-cifar/issues/19
+        mean = (0.4914, 0.4822, 0.4465)
+        sd = (0.247, 0.243, 0.261)
+        torch_ds = datasets.CIFAR10
+        cin = 3
+
+    elif dataset == "MNIST":
+        print("===== Using MNIST Dataset =====")
+        mean = (0.1307,)
+        sd = (0.3081,)
+        torch_ds = datasets.MNIST
+        cin = 1
+
     transform = transforms.Compose(
-        [
-            transforms.ToTensor(),
-            transforms.Normalize((0.4914, 0.4822, 0.4465), (0.247, 0.243, 0.261))
-            # values from https://github.com/kuangliu/pytorch-cifar/issues/19
-        ]
+        [transforms.ToTensor(), transforms.Normalize(mean, sd)]
     )
-    dataset1 = datasets.CIFAR10(
-        "../data", train=True, download=True, transform=transform
-    )
-    dataset2 = datasets.CIFAR10("../data", train=False, transform=transform)
+
+    dataset1 = torch_ds("../data", train=True, download=True, transform=transform)
+    dataset2 = torch_ds("../data", train=False, transform=transform)
 
     # Get model per each hyperparameter combo
     model_list = []
@@ -228,7 +239,7 @@ def get_models(hp_list, seed=1):
 
     grid = list(ParameterGrid(hp_list))
     for hp in grid:
-        model, train_loss, test_loss = get_model(hp, dataset1, dataset2)
+        model, train_loss, test_loss = get_model(hp, dataset1, dataset2, cin)
         model_list.append(model)
         train_loss_list.append(train_loss)
         test_loss_list.append(test_loss)
