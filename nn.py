@@ -108,15 +108,18 @@ def make_nn(width, depth, dropout):
             nn.Dropout(dropout))
         
     def stack_blocks(depth, cin):
-        net = nn.Sequential(
-            nin_block(cin, width, kernel_size=3, strides=2, dropout=dropout),
-            nin_block(width, width, kernel_size=3, strides=2, dropout=dropout))
+        modules = []
+        # First 2 blocks
+        modules.append(nin_block(cin, width, kernel_size=3, strides=2, dropout=dropout))
+        modules.append(nin_block(width, width, kernel_size=3, strides=2, dropout=dropout))
+        # More blocks if needed
         i = depth - 2
         while i > 0:
-            net.add(nin_block(width, width, kernel_size=3, strides=2))
-            net.add(nin_block(width, width, kernel_size=3, strides=2))
+            modules.append(nin_block(width, width, kernel_size=3, strides=2, dropout=dropout))
+            modules.append(nin_block(width, width, kernel_size=3, strides=2, dropout=dropout))
             i -= 2
-        return net
+        
+        return nn.Sequential(*modules)
 
     cin = 3 # TODO: change for MNIST
     net = nn.Sequential(

@@ -1,11 +1,11 @@
 import nn
 import kendall_correlation
 
-# hp = {"batch_size":64, "lr":1}
-# model, train_loss, test_loss = nn.get_model(hp, epochs=1, depth=2)
-# print('Train Loss: %.3f'%(train_loss))
-# print('Test Loss: %.3f'%(test_loss))
-# print(nn.get_weights(model))
+hp = {"batch_size":64, "lr":1}
+model, train_loss, test_loss = nn.get_model(hp, epochs=1, depth=2)
+print('Train Loss: %.3f'%(train_loss))
+print('Test Loss: %.3f'%(test_loss))
+print(nn.get_weights(model))
 
 bs = [64, 128]
 lr = [1]
