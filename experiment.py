@@ -7,7 +7,7 @@ import kendall_correlation
 # print('Test Loss: %.3f'%(test_loss))
 # print(models.get_weights(model))
 
-hp_list = {"batch_size": [64, 128], "depth": [2,4], "width": [2*96], "lr": [1], "epochs": [1], "dropout": [0.25,0.5]}
+hp_list = {"batch_size": [64, 128], "depth": [8,4], "width": [2*96], "lr": [1], "epochs": [1], "dropout": [0.25,0.5]}
 dataset = "CIFAR10"
 dataset = "MNIST"
 

@@ -105,9 +105,9 @@ def make_nn(cin, width, depth, dropout):
     """Return network in network model with given width, depth and dropout
     cin: number of input channels"""
 
-    def nin_block(in_channels, out_channels, kernel_size, strides, dropout):
+    def nin_block(in_channels, out_channels, kernel_size, strides, padding, dropout):
         return nn.Sequential(
-            nn.Conv2d(in_channels, out_channels, kernel_size, strides),
+            nn.Conv2d(in_channels, out_channels, kernel_size, strides, padding),
             nn.ReLU(),
             nn.Conv2d(out_channels, out_channels, 1, 1),
             nn.ReLU(),
@@ -119,18 +119,16 @@ def make_nn(cin, width, depth, dropout):
     def stack_blocks(depth, cin):
         modules = []
         # First 2 blocks
-        modules.append(nin_block(cin, width, kernel_size=3, strides=2, dropout=dropout))
-        modules.append(
-            nin_block(width, width, kernel_size=3, strides=2, dropout=dropout)
-        )
+        modules.append(nin_block(cin, width, 3, 2, padding=2, dropout=dropout))
+        modules.append(nin_block(width, width, 3, 2, padding=2, dropout=dropout))
         # More blocks if needed
         i = depth - 2
         while i > 0:
             modules.append(
-                nin_block(width, width, kernel_size=3, strides=2, dropout=dropout)
+                nin_block(width, width, 3, 2, padding=2, dropout=dropout)
             )
             modules.append(
-                nin_block(width, width, kernel_size=3, strides=2, dropout=dropout)
+                nin_block(width, width, 3, 2, padding=2, dropout=dropout)
             )
             i -= 2
 
@@ -145,7 +143,7 @@ def make_nn(cin, width, depth, dropout):
         # Transform the four-dimensional output into two-dimensional output with a
         # shape of (batch size, 10)
         nn.Flatten(),
-        nn.LogSoftmax(),
+        nn.LogSoftmax(dim=1),
     )
 
     return net
@@ -232,6 +230,11 @@ def get_models(hp_list, dataset, seed=1):
     dataset1 = torch_ds("../data", train=True, download=True, transform=transform)
     dataset2 = torch_ds("../data", train=False, transform=transform)
 
+    # TODO: REMOVE - takes the first 10% images of train set
+    from torch.utils.data import Subset
+
+    dataset1 = Subset(dataset1, indices=range(len(dataset1) // 10))
+
     # Get model per each hyperparameter combo
     model_list = []
     train_loss_list = []
@@ -239,6 +242,7 @@ def get_models(hp_list, dataset, seed=1):
 
     grid = list(ParameterGrid(hp_list))
     for hp in grid:
+        print(hp)
         model, train_loss, test_loss = get_model(hp, dataset1, dataset2, cin)
         model_list.append(model)
         train_loss_list.append(train_loss)
@@ -277,4 +281,5 @@ def get_vc(model):
 
 def get_weights(model):
     """Return parameters of the neural network"""
+    # TODO: doesn't work for NiN
     return model.fc2.weight
