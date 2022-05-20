@@ -47,7 +47,6 @@ def basic_kendall(bs, lr, epochs, dp, comp_measure='VC', norm_measure='param_nor
     """
     model_list, train_loss_list, test_loss_list = nnn.get_models(bs, lr, epochs, dp)
     gen_gap_list = [train_loss_list[i]-test_loss_list[i] for i in range(len(train_loss_list))]
-    print('gen gap list :' + str(gen_gap_list))
     if comp_measure == 'VC':
         vc_list = VC_dimension(model_list)
         return vc_list if lst else correlation_function(vc_list, gen_gap_list)
