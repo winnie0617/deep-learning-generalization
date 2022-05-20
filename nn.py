@@ -11,6 +11,16 @@ from sklearn.model_selection import ParameterGrid
 from math import log10
 import numpy as np
 
+transform=transforms.Compose([
+    transforms.ToTensor(),
+    transforms.Normalize((0.4914, 0.4822, 0.4465), (0.247, 0.243, 0.261))
+    # values from https://github.com/kuangliu/pytorch-cifar/issues/19
+    ])
+dataset1 = datasets.CIFAR10('../data', train=True, download=True,
+    transform=transform)
+dataset2 = datasets.CIFAR10('../data', train=False,
+    transform=transform)
+
 #input_size = 32 = W
 #kernel_size = 3 = K
 #padding - 0 = P
@@ -112,16 +122,6 @@ def get_model(
         cuda_kwargs = {"num_workers": 1, "pin_memory": True, "shuffle": True}
         train_kwargs.update(cuda_kwargs)
         test_kwargs.update(cuda_kwargs)
-
-    transform=transforms.Compose([
-            transforms.ToTensor(),
-            transforms.Normalize((0.4914, 0.4822, 0.4465), (0.247, 0.243, 0.261))
-            # values from https://github.com/kuangliu/pytorch-cifar/issues/19
-            ])
-    dataset1 = datasets.CIFAR10('../data', train=True, download=True,
-                       transform=transform)
-    dataset2 = datasets.CIFAR10('../data', train=False,
-                       transform=transform)
 
     train_loader = torch.utils.data.DataLoader(dataset1, **train_kwargs)
     test_loader = torch.utils.data.DataLoader(dataset2, **test_kwargs)
@@ -240,7 +240,7 @@ def get_vc(model):
 
 def get_weights(model):
     ''' Return parameters of the neural network'''
-    return model.fc2.weight.data.numpy()
+    return model.fc2.weight
     
 def main():
     # Training settings
