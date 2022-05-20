@@ -68,7 +68,6 @@ def VC_dimension(model_list):
         vc_list.append(nnn.get_vc(model))
     return vc_list
 
-#probably to do; kinda a stub rn
 def network_norm(model_list, norm_measure ='param_norm'):
     """
     Computes the spectral norm of each network model in model_list
