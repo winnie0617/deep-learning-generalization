@@ -11,15 +11,15 @@ import pandas as pd
 
 hp_list = {
     "batch_size": [128],
-    "depth": [2, 4],
-    "width": [24, 48],
+    "depth": [2, 4, 6], # min: 2
+    "width": [64, 128], 
     "lr": [1],
     "epochs": [1],
     "dropout": [0.25],
 }
 dataset = "CIFAR10"
 # dataset = "MNIST"
-model_name = "NiN"
+# model_name = "NiN"
 model_name = "conv"
 
 

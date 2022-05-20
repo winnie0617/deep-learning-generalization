@@ -25,24 +25,37 @@ import numpy as np
 # #kernel_size = 3 = K
 # #padding - 0 = P
 # #stride = 1 = S
-# #(W-K+2P)/S + 1 -->
-def make_conv(cin, width, depth, dropout):
-    return nn.Sequential(
-        nn.Conv2d(cin, 32, 3, 1),
+# #-->
+def make_conv(cin, width, depth, dropout, pixel):
+    layer = [
+        nn.Conv2d(cin, width // 2, 3, 1),
         nn.ReLU(),
-        nn.Conv2d(32, 64, 3, 1),
+        nn.Conv2d(width // 2, width, 3, 1),
         nn.ReLU(),
-        nn.MaxPool2d(2),
-        nn.Dropout(0.25),
-        nn.Flatten(),
-        nn.Linear(12544, 128),  # 64 x 14 x 14
-        nn.Dropout(0.25),
-        nn.Linear(128, 10),
-        nn.LogSoftmax(dim=1),
+    ]
+    # (W-K+2P)/S + 1
+    out_size = (pixel - 3) / 1 + 1  # after first conv
+    out_size = (out_size - 3) / 1 + 1
+    for _ in range(depth - 2):
+        layer.extend([nn.Conv2d(width, width, 2, 1), nn.ReLU()])
+        out_size = (out_size - 2) / 1 + 1
+
+    print(out_size)
+    layer.extend(
+        [
+            nn.MaxPool2d(2),
+            nn.Dropout(dropout),
+            nn.Flatten(),
+            nn.Linear(int(width * (out_size /2)**2), 128),  # 64 x 14 x 14
+            nn.Dropout(dropout),
+            nn.Linear(128, 10),
+            nn.LogSoftmax(dim=1),
+        ]
     )
+    return nn.Sequential(*layer)
 
 
-def make_NiN(cin, width, depth, dropout):
+def make_NiN(cin, width, depth, dropout, pixel):
     """Return network in network model with given width, depth and dropout
     cin: number of input channels"""
 
@@ -84,13 +97,13 @@ def make_NiN(cin, width, depth, dropout):
 
 
 class Net(nn.Module):
-    def __init__(self, cin, width, depth, dropout, model_name):
+    def __init__(self, cin, width, depth, dropout, model_name, pixel):
         super(Net, self).__init__()
         if model_name == "conv":
             maker = make_conv
         elif model_name == "NiN":
             maker = make_NiN
-        self.layer = maker(cin, width, depth, dropout)
+        self.layer = maker(cin, width, depth, dropout, pixel)
 
     def forward(self, x):
         out = self.layer(x)
@@ -151,6 +164,7 @@ def get_model(
     dataset2,
     cin,
     model_name,
+    pixel,
     test_batch_size=1000,
     gamma=0.7,
     dry_run=False,
@@ -174,11 +188,11 @@ def get_model(
     train_loader = torch.utils.data.DataLoader(dataset1, **train_kwargs)
     test_loader = torch.utils.data.DataLoader(dataset2, **test_kwargs)
 
-    net = Net(cin, hp["width"], hp["depth"], hp["dropout"], model_name)
+    net = Net(cin, hp["width"], hp["depth"], hp["dropout"], model_name, pixel)
     model = net.to(device)
     optimizer = optim.Adadelta(model.parameters(), lr=hp["lr"])
 
-    summary(model, input_size=(cin, 32, 32))
+    summary(model, input_size=(cin, pixel, pixel))
 
     scheduler = StepLR(optimizer, step_size=1, gamma=gamma)
     train_loss = 0
@@ -212,6 +226,7 @@ def get_models(hp_list, dataset, model_name, seed=1):
         sd = (0.247, 0.243, 0.261)
         torch_ds = datasets.CIFAR10
         cin = 3
+        pixel = 32
 
     elif dataset == "MNIST":
         print("===== Using MNIST Dataset =====")
@@ -219,6 +234,7 @@ def get_models(hp_list, dataset, model_name, seed=1):
         sd = (0.3081,)
         torch_ds = datasets.MNIST
         cin = 1
+        pixel = 28
 
     transform = transforms.Compose(
         [transforms.ToTensor(), transforms.Normalize(mean, sd)]
@@ -240,7 +256,9 @@ def get_models(hp_list, dataset, model_name, seed=1):
     grid = list(ParameterGrid(hp_list))
     for hp in grid:
         print(hp)
-        model, train_loss, test_loss = get_model(hp, dataset1, dataset2, cin, model_name)
+        model, train_loss, test_loss = get_model(
+            hp, dataset1, dataset2, cin, model_name, pixel
+        )
         model_list.append(model)
         train_loss_list.append(train_loss)
         test_loss_list.append(test_loss)
