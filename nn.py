@@ -9,32 +9,28 @@ from torch.optim.lr_scheduler import StepLR
 from torchsummary import summary
 from sklearn.model_selection import ParameterGrid
 
+# class Net(nn.Module):
+#     def __init__(self, width, depth, dp):
+#         super(Net, self).__init__()
+#         self.conv1 = nn.Conv2d(3, 32, 3, 2) #TODO: How many cout?
+#         self.conv2 = nn.Conv2d(32, 64, 1, 1)
+#         self.conv3 = nn.Conv2d(32, width, 1, 1)
+#         self.dropout = nn.Dropout(dp)
+#         self.conv4 = nn.Conv2d(width, 10, 1, 1) # Reduce channel number to class number
 
-
-
-class Net(nn.Module):
-    def __init__(self, width, depth, dp):
-        super(Net, self).__init__()
-        self.conv1 = nn.Conv2d(3, 32, 3, 2) #TODO: How many cout?
-        self.conv2 = nn.Conv2d(32, 64, 1, 1)
-        self.conv3 = nn.Conv2d(32, width, 1, 1)
-        self.dropout = nn.Dropout(dp)
-        self.conv4 = nn.Conv2d(width, 10, 1, 1) # Reduce channel number to class number
-
-    def forward(self, x):
-        x = self.conv1(x)
-        x = F.relu(x)
-        x = self.conv2(x)
-        x = F.relu(x)
-        x = self.conv3(x)
-        x = F.relu(x)
-        x = self.dropout(x)
-        x = self.conv4(x)
-        x = F.relu(x)
-        x = F.average_pool2d(x, 1)
-        output = F.log_softmax(x, dim=1)
-        return output
-
+#     def forward(self, x):
+#         x = self.conv1(x)
+#         x = F.relu(x)
+#         x = self.conv2(x)
+#         x = F.relu(x)
+#         x = self.conv3(x)
+#         x = F.relu(x)
+#         x = self.dropout(x)
+#         x = self.conv4(x)
+#         x = F.relu(x)
+#         x = F.average_pool2d(x, 1)
+#         output = F.log_softmax(x, dim=1)
+#         return output
 
 def train(model, device, train_loader, optimizer, epoch, log_interval, dry_run):
     model.train()
@@ -109,7 +105,9 @@ def make_nn(width, depth, dropout):
         nn.AdaptiveAvgPool2d((1, 1)),
         # Transform the four-dimensional output into two-dimensional output with a
         # shape of (batch size, 10)
-        nn.Flatten())
+        nn.Flatten(),
+        nn.LogSoftmax()
+        )
     
     return net
 
