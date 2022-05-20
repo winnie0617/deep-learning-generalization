@@ -2,6 +2,7 @@ from __future__ import print_function
 import models
 import torch
 import torch.nn as nn
+from math import log10
 
 
 def get_vc(model):
@@ -13,7 +14,7 @@ def get_vc(model):
     nn_weight_num = 0
     fc_weight_num = 0
     L = -1
-    for layer in model.children():
+    for layer in model.layer:
         if isinstance(layer, nn.Linear):
             # for linear activation, w_i = (input_i + 1)*output_i
             L += 1
@@ -27,8 +28,8 @@ def get_vc(model):
             ) * layer.out_channels
 
     W = nn_weight_num + fc_weight_num
-    print("Weight =" + str(W))
-    print("Layer =" + str(L))
+    # print("Weight =" + str(W))
+    # print("Layer =" + str(L))
     return W * L * log10(L)
 
 

@@ -254,7 +254,7 @@ def get_models(hp_list, dataset, seed=1):
     return grid, model_list, train_loss_list, test_loss_list
 
 
-def get_weights(model):
-    """Return parameters of the neural network"""
-    # TODO: doesn't work for NiN
-    return model.fc2.weight
+# def get_weights(model):
+#     """Return parameters of the neural network"""
+#     # TODO: doesn't work for NiN
+#     return model.fc2.weight
