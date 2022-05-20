@@ -18,44 +18,45 @@ hp_list = {
     "dropout": [0.25],
 }
 dataset = "CIFAR10"
-dataset = "MNIST"
-model = "NiN"
+# dataset = "MNIST"
+model_name = "NiN"
+model_name = "conv"
 
 
-def test_norm_kendall():
-    # norm_list = kendall_correlation.basic_kendall(bs, lr, epochs, dp, comp_measure='norm', norm_measure='spectral_orig', lst=True)
-    # norm_list2 = kendall_correlation.basic_kendall(bs, lr, epochs, dp, comp_measure='norm', norm_measure='path_norm', lst=True)
-    # norm_list3 = kendall_correlation.basic_kendall(bs, lr, epochs, dp, comp_measure='norm', norm_measure='spec', lst=True)
-    norm_ken_corra = kendall.basic_kendall(
-        bs, lr, epochs, dp, comp_measure="norm", norm_measure="param_norm", lst=True
-    )
-    norm_ken_corr = kendall.basic_kendall(
-        bs, lr, epochs, dp, comp_measure="norm", norm_measure="param_norm", lst=False
-    )
-    # print('norm list:' + str(norm_list))
-    # print('norm list2:' + str(norm_list2))
-    # print('norm list3:' + str(norm_list3))
-    print("norm list3:" + str(norm_ken_corra))
-    print("norm kendall: %.3f" % norm_ken_corr)
+# def test_norm_kendall():
+#     # norm_list = kendall_correlation.basic_kendall(bs, lr, epochs, dp, comp_measure='norm', norm_measure='spectral_orig', lst=True)
+#     # norm_list2 = kendall_correlation.basic_kendall(bs, lr, epochs, dp, comp_measure='norm', norm_measure='path_norm', lst=True)
+#     # norm_list3 = kendall_correlation.basic_kendall(bs, lr, epochs, dp, comp_measure='norm', norm_measure='spec', lst=True)
+#     norm_ken_corra = kendall.basic_kendall(
+#         bs, lr, epochs, dp, comp_measure="norm", norm_measure="param_norm", lst=True
+#     )
+#     norm_ken_corr = kendall.basic_kendall(
+#         bs, lr, epochs, dp, comp_measure="norm", norm_measure="param_norm", lst=False
+#     )
+#     # print('norm list:' + str(norm_list))
+#     # print('norm list2:' + str(norm_list2))
+#     # print('norm list3:' + str(norm_list3))
+#     print("norm list3:" + str(norm_ken_corra))
+#     print("norm kendall: %.3f" % norm_ken_corr)
 
 
-def test_VC_kendall():
-    vc_list = kendall.basic_kendall(bs, lr, epochs, dp, comp_measure="VC", lst=True)
-    VC_ken_corr = kendall.basic_kendall(
-        bs, lr, epochs, dp, comp_measure="VC", lst=False
-    )
-    print("VClist:" + str(vc_list))
-    print("VC kendall: %.3f" % VC_ken_corr)
+# def test_VC_kendall():
+#     vc_list = kendall.basic_kendall(bs, lr, epochs, dp, comp_measure="VC", lst=True)
+#     VC_ken_corr = kendall.basic_kendall(
+#         bs, lr, epochs, dp, comp_measure="VC", lst=False
+#     )
+#     print("VClist:" + str(vc_list))
+#     print("VC kendall: %.3f" % VC_ken_corr)
 
 
-def test_network():
-    grid, model_list, train_loss_list, test_loss_list = models.get_models(
-        hp_list, dataset
-    )
-    print("# of Models: " + str(len(model_list)))
-    print("Grid " + str(grid))
-    print("Training Loss:" + str(train_loss_list))
-    print("Testing Loss:" + str(test_loss_list))
+# def test_network():
+#     grid, model_list, train_loss_list, test_loss_list = models.get_models(
+#         hp_list, dataset
+#     )
+#     print("# of Models: " + str(len(model_list)))
+#     print("Grid " + str(grid))
+#     print("Training Loss:" + str(train_loss_list))
+#     print("Testing Loss:" + str(test_loss_list))
 
 
 # test_norm_kendall()
@@ -63,7 +64,7 @@ def test_network():
 # test_network()
 
 # Store hp, complexity measures, and test loss in pandas dataframe
-grid, model_list, train_loss_list, test_loss_list = models.get_models(hp_list, dataset)
+grid, model_list, train_loss_list, test_loss_list = models.get_models(hp_list, dataset, model_name)
 res = pd.DataFrame(grid)
 res["l_train"] = train_loss_list
 res["l_test"] = test_loss_list
@@ -74,7 +75,7 @@ for norm_type in ["param_norm", "spectral_orig", "spec"]:  # TODO: skipping path
     res[norm_type] = complexity.network_norm(model_list, norm_type)
 res["vc_dim"] = complexity.VC_dimension(model_list)
 
-res.to_csv(f"results/{dataset}-{model}.csv")
+res.to_csv(f"results/{dataset}-{model_name}.csv")
 
 # Calculate correlation
 for measure in measures:

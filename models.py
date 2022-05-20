@@ -26,37 +26,71 @@ import numpy as np
 # #padding - 0 = P
 # #stride = 1 = S
 # #(W-K+2P)/S + 1 -->
-# class Net(nn.Module):
-#     def __init__(self, dp):
-#         #I decreased the channel numbers significantly for faster debugging.
-#         super(Net, self).__init__()
-#         self.conv1 = nn.Conv2d(3, 3, 3, 1)
-#         self.conv2 = nn.Conv2d(3, 3, 3, 1)
-#         self.dropout1 = nn.Dropout(dp)
-#         self.dropout2 = nn.Dropout(dp)
-#         self.fc1 = nn.Linear(588, 20)  # 3 x 14 x 14
-#         self.fc2 = nn.Linear(20, 10)
+def make_conv(cin, width, depth, dropout):
+    return nn.Sequential(
+        nn.Conv2d(cin, 32, 3, 1),
+        nn.ReLU(),
+        nn.Conv2d(32, 64, 3, 1),
+        nn.ReLU(),
+        nn.MaxPool2d(2),
+        nn.Dropout(0.25),
+        nn.Flatten(),
+        nn.Linear(12544, 128),  # 64 x 14 x 14
+        nn.Dropout(0.25),
+        nn.Linear(128, 10),
+        nn.LogSoftmax(dim=1),
+    )
 
-#     def forward(self, x):
-#         x = self.conv1(x)
-#         x = F.relu(x)
-#         x = self.conv2(x)
-#         x = F.relu(x)
-#         x = F.max_pool2d(x, 2)
-#         x = self.dropout1(x)
-#         x = torch.flatten(x, 1)
-#         x = self.fc1(x)
-#         x = F.relu(x)
-#         x = self.dropout2(x)
-#         x = self.fc2(x)
-#         output = F.log_softmax(x, dim=1)
-#         return output
+
+def make_NiN(cin, width, depth, dropout):
+    """Return network in network model with given width, depth and dropout
+    cin: number of input channels"""
+
+    def nin_block(in_channels, out_channels, kernel_size, strides, padding, dropout):
+        return [
+            nn.Conv2d(in_channels, out_channels, kernel_size, strides, padding),
+            nn.ReLU(),
+            nn.Conv2d(out_channels, out_channels, 1, 1),
+            nn.ReLU(),
+            nn.Conv2d(out_channels, out_channels, 1, 1),
+            nn.ReLU(),
+            nn.Dropout(dropout),
+        ]
+
+    modules = []
+    # First 2 blocks
+    modules.extend(nin_block(cin, width, 3, 2, padding=2, dropout=dropout))
+    modules.extend(nin_block(width, width, 3, 2, padding=2, dropout=dropout))
+    # More blocks if needed
+    i = depth - 2
+    while i > 0:
+        modules.extend(nin_block(width, width, 3, 2, padding=2, dropout=dropout))
+        modules.extend(nin_block(width, width, 3, 2, padding=2, dropout=dropout))
+        i -= 2
+
+    modules.extend(
+        [
+            nn.Conv2d(width, 10, 1, 1),  # There are 10 label classes
+            nn.ReLU(),
+            nn.AdaptiveAvgPool2d((1, 1)),
+            # Transform the four-dimensional output into two-dimensional output with a
+            # shape of (batch size, 10)
+            nn.Flatten(),
+            nn.LogSoftmax(dim=1),
+        ]
+    )
+
+    return nn.Sequential(*modules)
 
 
 class Net(nn.Module):
-    def __init__(self, cin, width, depth, dropout):
+    def __init__(self, cin, width, depth, dropout, model_name):
         super(Net, self).__init__()
-        self.layer = make_NiN(cin, width, depth, dropout)
+        if model_name == "conv":
+            maker = make_conv
+        elif model_name == "NiN":
+            maker = make_NiN
+        self.layer = maker(cin, width, depth, dropout)
 
     def forward(self, x):
         out = self.layer(x)
@@ -111,52 +145,12 @@ def test(model, device, test_loader):
     return test_loss
 
 
-def make_NiN(cin, width, depth, dropout):
-    """Return network in network model with given width, depth and dropout
-    cin: number of input channels"""
-
-    def nin_block(in_channels, out_channels, kernel_size, strides, padding, dropout):
-        return [
-            nn.Conv2d(in_channels, out_channels, kernel_size, strides, padding),
-            nn.ReLU(),
-            nn.Conv2d(out_channels, out_channels, 1, 1),
-            nn.ReLU(),
-            nn.Conv2d(out_channels, out_channels, 1, 1),
-            nn.ReLU(),
-            nn.Dropout(dropout),
-        ]
-
-    modules = []
-    # First 2 blocks
-    modules.extend(nin_block(cin, width, 3, 2, padding=2, dropout=dropout))
-    modules.extend(nin_block(width, width, 3, 2, padding=2, dropout=dropout))
-    # More blocks if needed
-    i = depth - 2
-    while i > 0:
-        modules.extend(nin_block(width, width, 3, 2, padding=2, dropout=dropout))
-        modules.extend(nin_block(width, width, 3, 2, padding=2, dropout=dropout))
-        i -= 2
-
-    modules.extend(
-        [
-            nn.Conv2d(width, 10, 1, 1),  # There are 10 label classes
-            nn.ReLU(),
-            nn.AdaptiveAvgPool2d((1, 1)),
-            # Transform the four-dimensional output into two-dimensional output with a
-            # shape of (batch size, 10)
-            nn.Flatten(),
-            nn.LogSoftmax(dim=1),
-        ]
-    )
-
-    return nn.Sequential(*modules)
-
-
 def get_model(
     hp,
     dataset1,
     dataset2,
     cin,
+    model_name,
     test_batch_size=1000,
     gamma=0.7,
     dry_run=False,
@@ -180,7 +174,7 @@ def get_model(
     train_loader = torch.utils.data.DataLoader(dataset1, **train_kwargs)
     test_loader = torch.utils.data.DataLoader(dataset2, **test_kwargs)
 
-    net = Net(cin, hp["width"], hp["depth"], hp["dropout"])
+    net = Net(cin, hp["width"], hp["depth"], hp["dropout"], model_name)
     model = net.to(device)
     optimizer = optim.Adadelta(model.parameters(), lr=hp["lr"])
 
@@ -199,7 +193,7 @@ def get_model(
     return model, train_loss, test_loss
 
 
-def get_models(hp_list, dataset, seed=1):
+def get_models(hp_list, dataset, model_name, seed=1):
     """
     Given lists of hyperparameters, provide list of all models with their their associated training & testing loss
 
@@ -246,7 +240,7 @@ def get_models(hp_list, dataset, seed=1):
     grid = list(ParameterGrid(hp_list))
     for hp in grid:
         print(hp)
-        model, train_loss, test_loss = get_model(hp, dataset1, dataset2, cin)
+        model, train_loss, test_loss = get_model(hp, dataset1, dataset2, cin, model_name)
         model_list.append(model)
         train_loss_list.append(train_loss)
         test_loss_list.append(test_loss)
