@@ -135,8 +135,6 @@ def make_nn(width, depth, dropout):
     
     return net
 
-
-
 def get_model(
     hp,
     epochs=64,

@@ -1,11 +1,11 @@
-import nn
+import models
 import kendall_correlation
 
-hp = {"batch_size":64, "lr":1}
-model, train_loss, test_loss = nn.get_model(hp, epochs=1, depth=2)
-print('Train Loss: %.3f'%(train_loss))
-print('Test Loss: %.3f'%(test_loss))
-print(nn.get_weights(model))
+# hp = {"batch_size":64, "lr":1}
+# model, train_loss, test_loss = models.get_model(hp, epochs=1, depth=2)
+# print('Train Loss: %.3f'%(train_loss))
+# print('Test Loss: %.3f'%(test_loss))
+# print(models.get_weights(model))
 
 bs = [64, 128]
 lr = [1]
@@ -33,11 +33,11 @@ def test_VC_kendall():
     print('VC kendall: %.3f' % VC_ken_corr)
 
 def test_network():
-    model_list, train_loss_list, test_loss_list = nn.get_models(bs, lr, epochs, dp)
+    model_list, train_loss_list, test_loss_list = models.get_models(bs, lr, epochs, dp)
     print('# of Models: ' + str(len(model_list)))
     print('Training Loss:' + str(train_loss_list))
     print('Testing Loss:' +str(test_loss_list))
     
-test_norm_kendall()
+# test_norm_kendall()
 # test_VC_kendall()
-# test_network()
+test_network()

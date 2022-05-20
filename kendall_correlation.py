@@ -1,7 +1,7 @@
 from __future__ import print_function
 from ctypes import resize
 from socketserver import DatagramRequestHandler
-import nn as nnn
+import models
 import argparse
 import torch
 import torch.nn as nn
@@ -45,7 +45,7 @@ def basic_kendall(bs, lr, epochs, dp, comp_measure='VC', norm_measure='param_nor
     measure: either 'VC' or 'norm' (complexity measure to use)
     lst: boolean indicating whether to return a list of VC dimensions or the kendall correlation number
     """
-    model_list, train_loss_list, test_loss_list = nnn.get_models(bs, lr, epochs, dp)
+    model_list, train_loss_list, test_loss_list = models.get_models(bs, lr, epochs, dp)
     gen_gap_list = [train_loss_list[i]-test_loss_list[i] for i in range(len(train_loss_list))]
     if comp_measure == 'VC':
         vc_list = VC_dimension(model_list)
@@ -98,7 +98,7 @@ def network_norm(model_list, norm_measure ='param_norm'):
             norm_list.append(float(first.detach().numpy())*float(second.detach().numpy()))
     elif norm_measure == 'path_norm': # formula 44
         for model in model_list:
-            path_norm = torch.sum(torch.square(nnn.get_weights(model)))
+            path_norm = torch.sum(torch.square(models.get_weights(model)))
             norm_list.append(float(path_norm.detach().numpy()))
     elif norm_measure == 'spec': # formula 35
         for model in model_list:
