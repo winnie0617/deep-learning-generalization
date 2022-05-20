@@ -53,6 +53,16 @@ import numpy as np
 #         return output
 
 
+class Net(nn.Module):
+    def __init__(self, cin, width, depth, dropout):
+        super(Net, self).__init__()
+        self.layer = make_NiN(cin, width, depth, dropout)
+
+    def forward(self, x):
+        out = self.layer(x)
+        return out
+
+
 def train(model, device, train_loader, optimizer, epoch, log_interval, dry_run):
     model.train()
     running_loss = 0
@@ -101,12 +111,12 @@ def test(model, device, test_loader):
     return test_loss
 
 
-def make_nn(cin, width, depth, dropout):
+def make_NiN(cin, width, depth, dropout):
     """Return network in network model with given width, depth and dropout
     cin: number of input channels"""
 
     def nin_block(in_channels, out_channels, kernel_size, strides, padding, dropout):
-        return nn.Sequential(
+        return [
             nn.Conv2d(in_channels, out_channels, kernel_size, strides, padding),
             nn.ReLU(),
             nn.Conv2d(out_channels, out_channels, 1, 1),
@@ -114,39 +124,32 @@ def make_nn(cin, width, depth, dropout):
             nn.Conv2d(out_channels, out_channels, 1, 1),
             nn.ReLU(),
             nn.Dropout(dropout),
-        )
+        ]
 
-    def stack_blocks(depth, cin):
-        modules = []
-        # First 2 blocks
-        modules.append(nin_block(cin, width, 3, 2, padding=2, dropout=dropout))
-        modules.append(nin_block(width, width, 3, 2, padding=2, dropout=dropout))
-        # More blocks if needed
-        i = depth - 2
-        while i > 0:
-            modules.append(
-                nin_block(width, width, 3, 2, padding=2, dropout=dropout)
-            )
-            modules.append(
-                nin_block(width, width, 3, 2, padding=2, dropout=dropout)
-            )
-            i -= 2
+    modules = []
+    # First 2 blocks
+    modules.extend(nin_block(cin, width, 3, 2, padding=2, dropout=dropout))
+    modules.extend(nin_block(width, width, 3, 2, padding=2, dropout=dropout))
+    # More blocks if needed
+    i = depth - 2
+    while i > 0:
+        modules.extend(nin_block(width, width, 3, 2, padding=2, dropout=dropout))
+        modules.extend(nin_block(width, width, 3, 2, padding=2, dropout=dropout))
+        i -= 2
 
-        return nn.Sequential(*modules)
-
-    net = nn.Sequential(
-        stack_blocks(depth, cin),
-        # There are 10 label classes
-        nn.Conv2d(width, 10, 1, 1),
-        nn.ReLU(),
-        nn.AdaptiveAvgPool2d((1, 1)),
-        # Transform the four-dimensional output into two-dimensional output with a
-        # shape of (batch size, 10)
-        nn.Flatten(),
-        nn.LogSoftmax(dim=1),
+    modules.extend(
+        [
+            nn.Conv2d(width, 10, 1, 1),  # There are 10 label classes
+            nn.ReLU(),
+            nn.AdaptiveAvgPool2d((1, 1)),
+            # Transform the four-dimensional output into two-dimensional output with a
+            # shape of (batch size, 10)
+            nn.Flatten(),
+            nn.LogSoftmax(dim=1),
+        ]
     )
 
-    return net
+    return nn.Sequential(*modules)
 
 
 def get_model(
@@ -177,7 +180,7 @@ def get_model(
     train_loader = torch.utils.data.DataLoader(dataset1, **train_kwargs)
     test_loader = torch.utils.data.DataLoader(dataset2, **test_kwargs)
 
-    net = make_nn(cin, hp["width"], hp["depth"], hp["dropout"])
+    net = Net(cin, hp["width"], hp["depth"], hp["dropout"])
     model = net.to(device)
     optimizer = optim.Adadelta(model.parameters(), lr=hp["lr"])
 
@@ -185,9 +188,9 @@ def get_model(
 
     scheduler = StepLR(optimizer, step_size=1, gamma=gamma)
     train_loss = 0
-    for hp["epoch"] in range(1, hp["epochs"] + 1):
+    for epoch in range(1, hp["epochs"] + 1):
         train_loss += train(
-            model, device, train_loader, optimizer, hp["epochs"], log_interval, dry_run
+            model, device, train_loader, optimizer, epoch, log_interval, dry_run
         )
         scheduler.step()
 
@@ -230,10 +233,10 @@ def get_models(hp_list, dataset, seed=1):
     dataset1 = torch_ds("../data", train=True, download=True, transform=transform)
     dataset2 = torch_ds("../data", train=False, transform=transform)
 
-    # TODO: REMOVE - takes the first 10% images of train set
+    # TODO: REMOVE - takes the first 5% images of train set
     from torch.utils.data import Subset
 
-    dataset1 = Subset(dataset1, indices=range(len(dataset1) // 10))
+    dataset1 = Subset(dataset1, indices=range(len(dataset1) // 20))
 
     # Get model per each hyperparameter combo
     model_list = []
@@ -248,35 +251,7 @@ def get_models(hp_list, dataset, seed=1):
         train_loss_list.append(train_loss)
         test_loss_list.append(test_loss)
 
-    return model_list, train_loss_list, test_loss_list
-
-
-def get_vc(model):
-    """
-    Returns VC dimension of a given model
-
-    Tightest VC Dimension for a regular nn is O(WLlog(W)), where W = # of weights, L = # of layers (depth)
-    """
-    nn_weight_num = 0
-    fc_weight_num = 0
-    L = -1
-    for layer in model.children():
-        if isinstance(layer, nn.Linear):
-            # for linear activation, w_i = (input_i + 1)*output_i
-            L += 1
-            fc_weight_num += (layer.in_features + 1) * layer.out_features
-        elif isinstance(layer, nn.Conv2d):
-            # in general, # of w_i = (kernel_size^2 * output_{i-1} + 1)*output_{i}, output_i = input_i-1
-            # so total # of weights = \sum_{i} w_{i}
-            L += 1
-            nn_weight_num += (
-                (layer.kernel_size[0] ** 2) * layer.in_channels + 1
-            ) * layer.out_channels
-
-    W = nn_weight_num + fc_weight_num
-    print("Weight =" + str(W))
-    print("Layer =" + str(L))
-    return W * L * log10(L)
+    return grid, model_list, train_loss_list, test_loss_list
 
 
 def get_weights(model):
