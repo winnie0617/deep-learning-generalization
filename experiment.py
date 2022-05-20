@@ -1,6 +1,7 @@
 import models
 import kendall_correlation
 import measures
+import pandas as pd
 
 # hp = {"batch_size":64, "lr":1}
 # model, train_loss, test_loss = models.get_model(hp, epochs=1, depth=2)
@@ -11,6 +12,7 @@ import measures
 hp_list = {"batch_size": [128], "depth": [2,4], "width": [24, 48], "lr": [1], "epochs": [1], "dropout": [0.25]}
 dataset = "CIFAR10"
 dataset = "MNIST"
+model = "NiN"
 
 def test_norm_kendall():
     # norm_list = kendall_correlation.basic_kendall(bs, lr, epochs, dp, comp_measure='norm', norm_measure='spectral_orig', lst=True)
@@ -43,4 +45,8 @@ def test_network():
 
 # Store hp, complexity measures, and test loss in pandas dataframe
 grid, model_list, train_loss_list, test_loss_list = models.get_models(hp_list, dataset)
-print(measures.network_norm(model_list))
+res = pd.DataFrame(grid)
+res["norm"] = measures.network_norm(model_list)
+res["l_train"] = train_loss_list
+res["l_test"] = test_loss_list
+res.to_csv(f"results/{dataset}-{model}.csv")
