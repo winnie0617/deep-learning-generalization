@@ -32,7 +32,6 @@ def get_vc(model):
     # print("Layer =" + str(L))
     return W * L * log10(L)
 
-
 def VC_dimension(model_list):
     """
     Computes the VC dimension of each network model in model_list
@@ -62,7 +61,7 @@ def network_norm(model_list, norm_measure="param_norm"):
         try:
             temp = layer.weight
             return True
-        except torch.nn.modules.module.ModuleAttributeError:
+        except:
             return False
 
     if norm_measure == "param_norm":  # formula 42

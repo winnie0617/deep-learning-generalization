@@ -3,7 +3,7 @@ from ctypes import resize
 from socketserver import DatagramRequestHandler
 import models
 import numpy
-
+import complexity
 
 def corr_fun(comp_measure_list, gen_gap_list):
     """
@@ -47,8 +47,9 @@ def basic_kendall(
         train_loss_list[i] - test_loss_list[i] for i in range(len(train_loss_list))
     ]
     if comp_measure == "VC":
-        vc_list = VC_dimension(model_list)
+        vc_list = complexity.VC_dimension(model_list)
         return vc_list if lst else corr_fun(vc_list, gen_gap_list)
     else:
-        norm_list = network_norm(model_list, norm_measure)
+        norm_list = complexity.network_norm(model_list, norm_measure)
         return norm_list if lst else corr_fun(norm_list, gen_gap_list)
+

@@ -246,7 +246,7 @@ def get_models(hp_list, dataset, model_name, seed=1):
     # TODO: REMOVE - takes the first 5% images of train set
     from torch.utils.data import Subset
 
-    dataset1 = Subset(dataset1, indices=range(len(dataset1) // 20))
+    #dataset1 = Subset(dataset1, indices=range(len(dataset1) // 20))
 
     # Get model per each hyperparameter combo
     model_list = []

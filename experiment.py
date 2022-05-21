@@ -10,17 +10,17 @@ import pandas as pd
 # print(models.get_weights(model))
 
 hp_list = {
-    "batch_size": [128],
-    "depth": [2, 4, 6], # min: 2
-    "width": [64, 128], 
-    "lr": [1],
-    "epochs": [1],
+    "batch_size": [16,32],
+    "depth": [2,4,8], # min: 2
+    "width": [16,32,64], 
+    "lr": [0.25],
+    "epochs": [2],
     "dropout": [0.25],
 }
-dataset = "CIFAR10"
+dataset = "MNIST"
 # dataset = "MNIST"
 # model_name = "NiN"
-model_name = "conv"
+model_name = "NiN"
 
 
 # def test_norm_kendall():
@@ -71,13 +71,18 @@ res["l_test"] = test_loss_list
 
 # Complexity measures
 measures = ["param_norm", "spectral_orig", "spec", "vc_dim"]
+ 
 for norm_type in ["param_norm", "spectral_orig", "spec"]:  # TODO: skipping path norm
     res[norm_type] = complexity.network_norm(model_list, norm_type)
 res["vc_dim"] = complexity.VC_dimension(model_list)
 
 res.to_csv(f"results/{dataset}-{model_name}.csv")
 
+kendall_dict = {}
 # Calculate correlation
 for measure in measures:
-    corr = kendall.corr_fun(res[measure], res["l_test"])
+    corr = kendall.corr_fun(res[measure], res["l_test"]-res["l_train"])
+    kendall_dict[measure] = [corr]
     print(f"{measure}: {corr}")
+res2 = pd.DataFrame(kendall_dict)
+res2.to_csv(f"results/{dataset}-{model_name}-correlation.csv")
