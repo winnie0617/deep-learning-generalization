@@ -10,17 +10,17 @@ import pandas as pd
 # print(models.get_weights(model))
 
 hp_list = {
-    "batch_size": [16,32],
+    "batch_size": [512],
     "depth": [2,4,8], # min: 2
-    "width": [16,32,64], 
-    "lr": [0.25],
-    "epochs": [2],
+    "width": [64, 96, 192], 
+    "lr": [0.01, 0.1, 1],
+    "epochs": [3],
     "dropout": [0.25],
 }
 dataset = "MNIST"
 # dataset = "MNIST"
 # model_name = "NiN"
-model_name = "NiN"
+model_name = "conv"
 
 
 # def test_norm_kendall():
