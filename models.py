@@ -254,8 +254,8 @@ def get_models(hp_list, dataset, model_name, seed=1):
     test_loss_list = []
 
     grid = list(ParameterGrid(hp_list))
-    for hp in grid:
-        print(hp)
+    for i, hp in enumerate(grid):
+        print(f"{i}/{len(grid)} -- {hp}")
         model, train_loss, test_loss = get_model(
             hp, dataset1, dataset2, cin, model_name, pixel
         )

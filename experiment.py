@@ -11,11 +11,11 @@ import pandas as pd
 
 hp_list = {
     "batch_size": [512],
-    "depth": [2,4,8], # min: 2
-    "width": [64, 96, 192], 
-    "lr": [0.01, 0.1, 1],
-    "epochs": [3],
-    "dropout": [0.25],
+    "depth": [2, 4, 8], # min: 2
+    "width": [32, 64, 96], 
+    "lr": [0.1, 1],
+    "epochs": [8],
+    "dropout": [0.25, 0.5],
 }
 dataset = "MNIST"
 # dataset = "MNIST"
