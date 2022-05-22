@@ -202,8 +202,9 @@ def get_model(
         )
         scheduler.step()
 
-    train_loss /= hp["epochs"]
+    train_loss = test(model, device, train_loader) # recalculate loss on fitted model
     test_loss = test(model, device, test_loader)
+    print(f"========== \n train loss: {train_loss}\n test loss: {test_loss}\n==========")
     return model, train_loss, test_loss
 
 
@@ -257,7 +258,7 @@ def get_models(hp_list, dataset, model_name, seed=1):
     for i, hp in enumerate(grid):
         print(f"{i}/{len(grid)} -- {hp}")
         model, train_loss, test_loss = get_model(
-            hp, dataset1, dataset2, cin, model_name, pixel
+            hp, dataset1, dataset2, cin, model_nazme, pixel
         )
         model_list.append(model)
         train_loss_list.append(train_loss)

@@ -9,12 +9,21 @@ import pandas as pd
 # print('Test Loss: %.3f'%(test_loss))
 # print(models.get_weights(model))
 
+# hp_list = {
+#     "batch_size": [32],
+#     "depth": [2], # min: 2
+#     "width": [3*96, 2*96, 3*96], 
+#     "lr": [0.5, 1],
+#     "epochs": [6],
+#     "dropout": [0.25, 0.5],
+# }
+
 hp_list = {
-    "batch_size": [512],
-    "depth": [2, 4, 8], # min: 2
+    "batch_size": [64],
+    "depth": [2, 4, 6], # min: 2
     "width": [32, 64, 96], 
     "lr": [0.1, 1],
-    "epochs": [8],
+    "epochs": [3],
     "dropout": [0.25, 0.5],
 }
 dataset = "MNIST"
