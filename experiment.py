@@ -22,11 +22,11 @@ hp_list = {
     "batch_size": [64],
     "depth": [2, 4, 6], # min: 2
     "width": [32, 64, 96], 
-    "lr": [0.1, 1],
-    "epochs": [3],
+    "lr": [0.5, 1],
+    "epochs": [5],
     "dropout": [0.25, 0.5],
 }
-dataset = "MNIST"
+dataset = "CIFAR10"
 # dataset = "MNIST"
 # model_name = "NiN"
 model_name = "conv"

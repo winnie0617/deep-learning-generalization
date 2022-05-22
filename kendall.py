@@ -53,3 +53,19 @@ def basic_kendall(
         norm_list = complexity.network_norm(model_list, norm_measure)
         return norm_list if lst else corr_fun(norm_list, gen_gap_list)
 
+
+if __name__ == "__main__":
+    import pandas as pd
+    dataset = "MNIST"
+    model_name = "conv"
+    res = pd.read_csv(f"results/{dataset}-{model_name}.csv", index_col=0)
+    measures = ["param_norm", "spectral_orig", "spec", "vc_dim"]
+    hp_varied = ["depth", "width", "lr", "dropout"]
+    kendall_dict = {}
+    # Calculate correlation
+    for measure in measures:
+        corr = corr_fun(res[measure], res["l_test"]-res["l_train"])
+        kendall_dict[measure] = [corr]
+        print(f"{measure}: {corr}")
+    res2 = pd.DataFrame(kendall_dict)
+    res2.to_csv(f"results/{dataset}-{model_name}-all-correlation.csv")

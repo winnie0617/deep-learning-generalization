@@ -258,7 +258,7 @@ def get_models(hp_list, dataset, model_name, seed=1):
     for i, hp in enumerate(grid):
         print(f"{i}/{len(grid)} -- {hp}")
         model, train_loss, test_loss = get_model(
-            hp, dataset1, dataset2, cin, model_nazme, pixel
+            hp, dataset1, dataset2, cin, model_name, pixel
         )
         model_list.append(model)
         train_loss_list.append(train_loss)
