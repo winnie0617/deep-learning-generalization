@@ -19,17 +19,17 @@ import pandas as pd
 # }
 
 hp_list = {
-    "batch_size": [64],
-    "depth": [2, 4, 6], # min: 2
+    "batch_size": [32],
+    "depth": [2], # min: 2
     "width": [32, 64, 96], 
-    "lr": [0.1, 1],
-    "epochs": [3],
-    "dropout": [0.25, 0.5],
+    "lr": [0.5, 0.75, 1],
+    "epochs": [11],
+    "dropout": [0.25, 0.5, 0.75],
 }
-dataset = "MNIST"
-# dataset = "MNIST"
-# model_name = "NiN"
-model_name = "conv"
+dataset = "CIFAR10"  
+#dataset = "MNIST" 
+model_name = "NiN"
+# model_name = "conv"
 
 
 # def test_norm_kendall():
