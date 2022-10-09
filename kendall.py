@@ -7,10 +7,14 @@ import complexity
 
 def corr_fun(comp_measure_list, gen_gap_list):
     """
-    Given list of complexity mesaures and associated generalization gaps, compute τ
+    Given list of complexity mesaures and associated generalization gaps, 
+    return τ, the advanced kendall correlation 
 
-    comp_measure_list: list of μ(θ) for each hyperparameter set θ
-    gen_gap_list: list of  g(θ) for each hyperparameter set θ
+    Parameters
+        comp_measure_list: list of μ(θ), the theoretical complexity, for each 
+        hyperparameter set θ in the hyperparameter space
+        gen_gap_list: list of g(θ), the empirical generalization gap, for each 
+        hyperparameter set θ in the hyperparameter space 
     """
     n = len(comp_measure_list)
     cardinality = n**2 - n
@@ -24,23 +28,23 @@ def corr_fun(comp_measure_list, gen_gap_list):
     return running_sum / cardinality
 
 
-def basic_kendall(
-    bs, lr, epochs, dp, comp_measure="VC", norm_measure="param_norm", lst="True"
-):
+def basic_kendall(bs, lr, epochs, dp, comp_measure="VC", 
+    norm_measure="param_norm", lst="True"):
     """
-    Computes the vanilla kendall correlation on a hyperparameter space choices Θ_1 x ... Θ_n.
+    Returns the vanilla kendall correlation on a hyperparameter space choices 
+    Θ_1 x ... Θ_n.
 
-    Very space & time inefficient.
-
-    bs: list of batch size choices v
-    lr: list of learning rate choices v
-    epochs: list of epoch choices v
-    dp: list of dropout probability choices
-    w: list of network layer widths
-    d: list of network depth choices
-    op: list of optimizer choices
-    measure: either 'VC' or 'norm' (complexity measure to use)
-    lst: boolean indicating whether to return a list of VC dimensions or the kendall correlation number
+    Parameters:
+        bs: list of batch size choices v
+        lr: list of learning rate choices v
+        epochs: list of epoch choices v
+        dp: list of dropout probability choices
+        w: list of network layer widths
+        d: list of network depth choices
+        op: list of optimizer choices
+        measure: either 'VC' or 'norm' (complexity measure to use)
+        lst: boolean indicating whether to return a list of VC dimensions or 
+            the kendall correlation number
     """
     model_list, train_loss_list, test_loss_list = models.get_models(bs, lr, epochs, dp)
     gen_gap_list = [
@@ -52,7 +56,6 @@ def basic_kendall(
     else:
         norm_list = complexity.network_norm(model_list, norm_measure)
         return norm_list if lst else corr_fun(norm_list, gen_gap_list)
-
 
 if __name__ == "__main__":
     import pandas as pd
